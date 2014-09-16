@@ -1,0 +1,196 @@
+<?xml version="1.0"?>
+
+<!-- 
+Build file for Astro-Ved Palm application (Premaservices)
+-->
+
+<project name="AstroVed Palm: collect and deploy WAR" basedir="." default="build">
+    <property name="appname" value="${ant.project.name}" />
+    <property name="env" value="local" />
+    
+	<!-- set paths -->
+    <property name="lib.dir" value="lib" />
+    <property name="src.dir" value="src" />
+    <property name="build.dir" value="bin" />
+    <property name="conf.dir" value="conf" />
+    <property name="web.dir" value="web" />
+    <property name="war.dir" value="${build.dir}" />
+    <property name="war.file" value="${dist.dir}/${appname}.war" />
+    <property name="webinf.dir" value="${war.dir}/WEB-INF" />
+    <property name="class.dir" value="${war.dir}/WEB-INF/classes" />
+    <property name="warlib.dir" value="${war.dir}/WEB-INF/lib" />
+    <property name="jsp.dir" value="${war.dir}/WEB-INF/jsp" />
+	<property name="js.dir" value="${war.dir}/WEB-INF/js" />
+    <property name="views.dir" value="${src.dir}/ru/premaservices/astroved/palm/view" />
+    <property name="model.dir" value="${src.dir}/ru/premaservices/astroved/palm/model" />
+    <property name="controller.dir" value="${src.dir}/ru/premaservices/astroved/palm/controller" />
+    <property name="util.dir" value="${src.dir}/ru/premaservices/util" />
+    <property name="env.props" value="${env}.properties" />
+    <property name="tv.props" value="${class.dir}/av-palm.properties"/>
+
+    <path id="master-classpath" description="Master CLASSPATH for this script">
+        <fileset dir="${lib.dir}">
+            <include name="*.jar" />
+        </fileset>
+        <pathelement location="bin/WEB-INF/classes/" />
+    </path>
+
+    <target name="init" description="Setup for build script">
+        <mkdir dir="${conf.dir}" />
+        <mkdir dir="${web.dir}" />
+        <mkdir dir="${class.dir}" />
+        <mkdir dir="${lib.dir}" />
+        <mkdir dir="${warlib.dir}" />
+        <mkdir dir="${jsp.dir}" />
+    	<mkdir dir="${js.dir}" />
+        <mkdir dir="${views.dir}" />
+        <mkdir dir="${model.dir}" />
+        <mkdir dir="${controller.dir}" />
+        <mkdir dir="${util.dir}" />
+    </target>
+
+    <target name="updateweb" depends="init" 
+            description="Copies web related files to WAR directory">
+        <copy todir="${war.dir}">
+            <fileset dir="${web.dir}">
+                <include name="**/*.jsp" />
+            	<include name="**/*.*htm*" />
+            	<include name="**/*.css" />
+            </fileset>
+        </copy>
+    	<copy todir="${webinf.dir}">
+            <fileset dir="${web.dir}">
+                <include name="**/*" />
+            	<exclude name="**/*.js*" />
+            	<exclude name="**/*.*htm*" />
+            </fileset>
+        </copy>
+        <copy todir="${jsp.dir}">
+            <fileset dir="${views.dir}" >
+            	<include name="**/*.jsp" />
+            	<include name="**/*.tld" />
+            	<include name="**/*.xsl" />
+            	<include name="**/*.xsd" />
+            </fileset>	
+        </copy>
+    	<copy todir="${js.dir}">
+            <fileset dir="${web.dir}/lib">
+				<include name="**/*.js" />
+            </fileset>	
+        </copy>
+    </target>
+
+    <target name="updatelib" depends="init" 
+            description="Copies JAR files to WAR directory">
+        <copy todir="${warlib.dir}">
+            <fileset dir="${lib.dir}">
+                <exclude name="javax.servlet*.jar" />
+                <exclude name="*jetty*.jar" />
+                <exclude name="*junit*.jar" />
+                <exclude name="*spring-mock*.jar" />
+            </fileset>
+        </copy>
+    </target>
+
+    <target name="deleteconfig" depends="init" 
+            description="Deletes config files from WAR directory">
+        <delete failonerror="false">
+            <fileset dir="${war.dir}">
+                <include name="**/*.properties" />
+                <include name="**/*.xml" />
+            </fileset>
+        </delete>
+    </target>
+
+    <target name="updateconfig" depends="init"
+            description="Copies configuration files to WAR directory">
+        <echo level="info">Environment config file: ${env.props}</echo>
+    	<copy todir="${class.dir}/ru/premaservices/astroved/palm/model/">
+    		 <fileset dir="${model.dir}">
+                <include name="**/*.xml" />
+            </fileset>
+    	</copy>
+    	<copy todir="${class.dir}/ru/premaservices/astroved/palm/view/">
+            <fileset dir="${views.dir}" >
+            	<include name="**/*.png" />
+            	<include name="**/*.tld" />
+            </fileset>	
+        </copy>
+        <copy todir="${class.dir}">
+            <fileset dir="${conf.dir}">
+            	<include name="**/*.xml" />
+            	<exclude name="**/web.xml"/>            	
+                <include name="**/*.properties" />
+            </fileset>
+        </copy>
+        <copy todir="${webinf.dir}" preservelastmodified="true">
+            <fileset dir="${conf.dir}">
+                <include name="**/web.xml" />
+            </fileset>
+        </copy>
+    </target>
+	
+	<target name="clean" description="Deletes files from WAR directory">
+        <delete failonerror="false">
+            <fileset dir="${war.dir}">
+                <include name="**/*.*" />
+            </fileset>
+        </delete>
+        <delete failonerror="false">
+            <fileset dir="${dist.dir}">
+                <include name="**/*" />
+            </fileset>
+        </delete>
+    </target>
+
+    <target name="compile" depends="init" 
+    	    description="Compiles .java files to WAR directory">
+        <javac srcdir="${src.dir}" destdir="${class.dir}" debug="true" 
+               failonerror="true" classpathref="master-classpath" 
+        	   depend="true"/>
+    </target>
+
+    <target name="build" depends="compile,updateweb,updateconfig,updatelib" />
+
+    <target name="rebuild" 
+            depends="clean,compile,updateweb,updateconfig,updatelib" />
+
+    <target name="dist" depends="rebuild" description="Assembles WAR file">
+        <copy todir="${webinf.dir}/${src.dir}">
+            <fileset dir="${src.dir}">
+                <include name="**/*.java" />
+            </fileset>
+        </copy>
+        <mkdir dir="${dist.dir}" />
+        <war destfile="${war.file}" webxml="${conf.dir}/web.xml">
+            <fileset dir="${war.dir}">
+                <include name="**/*.*" />
+                <exclude name="**/web.xml" />
+                <exclude name="**/test/*.class" />
+                <exclude name="**/*mock*.jar" />
+            </fileset>
+        </war>
+        <delete dir="${webinf.dir}/${src.dir}" failonerror="false" />
+    </target>
+
+    <target name="deploy" depends="dist" 
+            description="Deploys WAR file to deploy.dir">
+        <delete failonerror="true" dir="${deploy.dir}/${appname}" />
+        <copy file="${war.file}" todir="${deploy.dir}" />
+    </target>
+	
+	<!-- Test tasks -->	
+	
+	<target name="testAdminController" depends="build">
+        <junit printsummary="true" showoutput="yes" filtertrace="false">
+            <classpath refid="master-classpath" />
+            <batchtest fork="yes">
+                <formatter type="plain" />
+                <fileset dir="${class.dir}">
+                    <include name="**/AdminControllerTest.class" />
+                </fileset>
+            </batchtest>
+        </junit>
+    </target>
+	
+</project>

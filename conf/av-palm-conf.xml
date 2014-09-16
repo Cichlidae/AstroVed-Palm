@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:mvc="http://www.springframework.org/schema/mvc"
+    xmlns:context="http://www.springframework.org/schema/context"
+    xmlns:tx="http://www.springframework.org/schema/tx"
+    xmlns:p="http://www.springframework.org/schema/p" 
+    xmlns:util="http://www.springframework.org/schema/util"
+    xsi:schemaLocation="
+        http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-3.1.xsd
+        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.1.xsd
+        http://www.springframework.org/schema/tx 
+        http://www.springframework.org/schema/tx/spring-tx-3.1.xsd
+        http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-2.5.xsd">
+ 
+    <!-- DispatcherServlet Context: defines this servlet's request-processing infrastructure -->
+ 
+    <!-- Scans within the base package of the application for @Components to configure as beans -->
+    <!-- @Controller, @Service, @Configuration, etc. -->
+    <context:component-scan base-package="ru.premaservices.astroved.palm.dao, ru.premaservices.extention.spring.hibernate.validation.dao, ru.premaservices.astroved.palm.controller, ru.premaservices.astroved.palm.service"/>
+ 
+    <!-- Enables the Spring MVC @Controller programming model -->
+    <mvc:annotation-driven>
+    	<mvc:argument-resolvers>
+    		<bean class="ru.premaservices.extention.mvc.annotation.SessionAttributeArgumentResolver"/>
+    		<bean class="ru.premaservices.extention.mvc.annotation.RemoteAddressArgumentResolver"/>
+    	</mvc:argument-resolvers>
+    </mvc:annotation-driven>
+	
+	<!-- In order configuration to be comparable with old controllers -->
+	<bean class="org.springframework.web.servlet.mvc.SimpleControllerHandlerAdapter" />
+	
+	<!-- HIBERNATE integration -->
+ 	<bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+		<property name="driverClassName" value="com.mysql.jdbc.Driver" />
+    	<property name="url" value="jdbc:mysql://localhost:3306/astroved-palm" />
+    	<property name="username" value="root" />
+   		<property name="password" value="647907" />
+	</bean>
+	
+	<util:properties id="hibernateProperties">
+		<prop key="hibernate.hbm2ddl.auto">update</prop>
+		<prop key="hibernate.c3p0.minPoolSize">1</prop>
+		<prop key="hibernate.c3p0.maxPoolSize">1</prop>
+		<prop key="hibernate.c3p0.timeout">600</prop>
+		<prop key="hibernate.c3p0.max_statement">50</prop>
+		<prop key="hibernate.format_sql">true</prop>
+		<prop key="hibernate.generate_statistics">true</prop>
+	</util:properties>
+	
+	<bean id="sessionFactory" class="org.springframework.orm.hibernate4.LocalSessionFactoryBean" 
+		p:dataSource-ref="dataSource"
+		p:configLocation="classpath:ru/premaservices/astroved/student/pojo/hibernate.cfg.xml"
+		p:hibernateProperties-ref="hibernateProperties">
+	</bean>
+	<bean id="transactionManager" class="org.springframework.orm.hibernate4.HibernateTransactionManager"
+		p:sessionFactory-ref="sessionFactory"/>
+	
+	<!-- Enable annotation style of managing transactions -->
+	<tx:annotation-driven transaction-manager="transactionManager" />
+
+    <!-- Resolve logical view names to JSP resources -->
+	<bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<property name="viewClass" value="org.springframework.web.servlet.view.JstlView"/>
+	    <property name="prefix" value="/WEB-INF/jsp/" />
+	    <property name="suffix" value=".jsp" />
+	</bean>
+	
+	<!-- Tiles -->
+	<bean id="viewResolver" class="org.springframework.web.servlet.view.UrlBasedViewResolver">
+	    <property name="viewClass" value="org.springframework.web.servlet.view.tiles2.TilesView"/>	      
+	</bean>
+	<bean id="tilesConfigurer" class="org.springframework.web.servlet.view.tiles2.TilesConfigurer">
+	    <property name="definitions">
+	        <list>
+	            <value>/WEB-INF/classes/tiles.xml</value>
+	        </list>
+	    </property>
+	</bean>	
+	
+	<!-- Resolve all the other VIEW resources -->
+	<bean class="org.springframework.web.servlet.view.ResourceBundleViewResolver">
+  		<property name="basename" value="/WEB-INF/classes/views"/>
+	</bean>	
+	
+	<!-- Messages -->
+	<bean id="messageSource" class="org.springframework.context.support.ReloadableResourceBundleMessageSource">
+        <property name="basenames">
+            <list>
+                <value>/WEB-INF/classes/messages</value>
+            </list>
+        </property>
+        <property name="defaultEncoding" value="utf-8"/>
+        <property name="fallbackToSystemLocale" value="true"/>
+ 	</bean>
+ 	<bean id="applicationMessageSource" class="ru.premaservices.astroved.palm.service.ApplicationMessageSource"/>
+ 	
+ 	<!-- Security -->
+ 	<bean class="ru.premaservices.util.ApplicationSecurityManager"/>
+ 	
+ 	<!-- Handler Interceptors -->
+ 	<mvc:interceptors>
+ 		<bean class="ru.premaservices.astroved.palm.controller.ApplicationSecurityInterceptor" />
+ 	</mvc:interceptors>
+ 		
+	<!-- Simple redirects to internal resources; URL path substring becomes view name (e.g. '/main.htm' -> 'main') -->
+	<bean id="simpleController" class="org.springframework.web.servlet.mvc.UrlFilenameViewController"/>	
+	<bean class="org.springframework.web.servlet.handler.SimpleUrlHandlerMapping">
+	    <property name="mappings">
+	        <value>
+	        	/main.html=simpleController
+	        	/signin.html=simpleController
+	            /suerr.html=simpleController
+	            /iserr.html=simpleController
+	        </value>
+	    </property>
+	</bean>	
+	
+	<!-- Resources -->
+	<mvc:resources mapping="/js/*.js" location="/WEB-INF/js/"/>
+	<mvc:resources mapping="/includes/**" location="/WEB-INF/includes/"/>
+	
+	<!-- Exceptions -->
+	<bean class="org.springframework.web.servlet.handler.SimpleMappingExceptionResolver">
+		<property name="exceptionMappings">
+			<map>
+				<entry key="DataAccessException" value="iserr"/>
+				<entry key="org.hibernate.HibernateException" value="iserr"/>			
+			</map>
+		</property>
+		<property name="defaultErrorView" value="iserr" />
+	</bean>
+	
+	<!-- Custom beans -->
+	<bean id="constants" class="ru.premaservices.astroved.palm.var.Constants" scope="singleton">
+		<constructor-arg index="0" type="java.lang.Integer" value="12500"/> <!-- min payment sum (RUB) to enroll on 1st course -->		
+	</bean>
+	
+</beans>
